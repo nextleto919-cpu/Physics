@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fizika Qum Qutusu Simulyasiyası</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        canvas {
+            border: 2px solid #555;
+            background-color: #000;
+            cursor: crosshair;
+        }
+        #controls {
+            margin: 10px;
+        }
+        button {
+            padding: 8px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <h1>Fizika Qum Qutusu</h1>
+        <button onclick="clearCanvas()">Ekranı Təmizlə</button>
+    </div>
+    <canvas id="simCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = window.innerWidth * 0.9;
+        canvas.height = window.innerHeight * 0.8;
+
+        const objects = [];
+        const gravity = 0.2;
+        const friction = 0.99;
+
+        class PhysicsObject {
+            constructor(x, y, radius) {
+                this.x = x;
+                this.y = y;
+                this.radius = radius;
+                this.vx = (Math.random() - 0.5) * 5;
+                this.vy = (Math.random() - 0.5) * 5;
+                this.color = `hsl(${Math.random() * 360}, 100%, 50%)`;
+                this.mass = radius;
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+                ctx.closePath();
+            }
+
+            update() {
+                this.vy += gravity;
+                this.vx *= friction;
+                this.vy *= friction;
+
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Divarlarla toqquşma
+                if (this.x + this.radius > canvas.width || this.x - this.radius < 0) {
+                    this.vx = -this.vx * 0.8;
+                    this.x = this.x + this.radius > canvas.width ? canvas.width - this.radius : this.radius;
+                }
+
+                // Döşəmə ilə toqquşma
+                if (this.y + this.radius > canvas.height) {
+                    this.vy = -this.vy * 0.5;
+                    this.y = canvas.height - this.radius;
+                    this.vx *= 0.8; // döşəmə sürtünməsi
+                }
+            }
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            objects.forEach((obj, index) => {
+                obj.update();
+                
+                // Digər obyektlərlə toqquşma
+                for (let i = index + 1; i < objects.length; i++) {
+                    const other = objects[i];
+                    const dx = other.x - obj.x;
+                    const dy = other.y - obj.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    const minDistance = obj.radius + other.radius;
+
+                    if (distance < minDistance) {
+                        const nx = dx / distance;
+                        const ny = dy / distance;
+                        const kx = obj.vx - other.vx;
+                        const ky = obj.vy - other.vy;
+                        const p = 2 * (nx * kx + ny * ky) / (obj.mass + other.mass);
+
+                        obj.vx -= p * other.mass * nx;
+                        obj.vy -= p * other.mass * ny;
+                        other.vx += p * obj.mass * nx;
+                        other.vy += p * obj.mass * ny;
+
+                        const overlap = minDistance - distance;
+                        obj.x -= nx * overlap * 0.5;
+                        obj.y -= ny * overlap * 0.5;
+                        other.x += nx * overlap * 0.5;
+                        other.y += ny * overlap * 0.5;
+                    }
+                }
+
+                obj.draw();
+            });
+
+            requestAnimationFrame(animate);
+        }
+
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const radius = Math.random() * 15 + 10;
+            objects.push(new PhysicsObject(x, y, radius));
+        });
+
+        function clearCanvas() {
+            objects.length = 0;
+        }
+
+        animate();
+    </script>
+</body>
+</html>
