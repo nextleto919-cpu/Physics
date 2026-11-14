@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <title>Fizika Qum Qutusu</title>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #222;
+        }
+        canvas {
+            border: 2px solid #555;
+            background-color: #000;
+            cursor: crosshair;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="sandbox" width="800" height="600"></canvas>
+    <script>
+        const canvas = document.getElementById('sandbox');
+        const ctx = canvas.getContext('2d');
+        const width = canvas.width;
+        const height = canvas.height;
+        const grid = Array(width).fill(null).map(() => Array(height).fill(null));
+
+        let isDrawing = false;
+
+        class Element {
+            constructor(x, y, color, type) {
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                this.type = type;
+            }
+        }
+
+        canvas.addEventListener('mousedown', (e) => { isDrawing = true; spawnElements(e); });
+        canvas.addEventListener('mouseup', () => isDrawing = false);
+        canvas.addEventListener('mousemove', spawnElements);
+
+        function spawnElements(e) {
+            if (!isDrawing) return;
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = Math.floor(e.clientX - rect.left);
+            const mouseY = Math.floor(e.clientY - rect.top);
+            
+            for(let i = -10; i < 10; i++) {
+                for(let j = -10; j < 10; j++) {
+                    const newX = mouseX + i;
+                    const newY = mouseY + j;
+                    if (newX >= 0 && newX < width && newY >= 0 && newY < height) {
+                        if (!grid[newX][newY] && Math.random() > 0.5) {
+                            grid[newX][newY] = new Element(newX, newY, '#00aaff', 'water');
+                        }
+                    }
+                }
+            }
+        }
+
+        function update() {
+            for (let x = 0; x < width; x++) {
+                for (let y = height - 1; y >= 0; y--) {
+                    const el = grid[x][y];
+                    if (el && el.type === 'water') {
+                        if (y + 1 < height && !grid[x][y + 1]) {
+                            grid[x][y + 1] = el;
+                            grid[x][y] = null;
+                            el.y = y + 1;
+                        } else if (y + 1 < height && x + 1 < width && !grid[x+1][y+1]) {
+                            grid[x+1][y+1] = el;
+                            grid[x][y] = null;
+                            el.x = x + 1;
+                            el.y = y + 1;
+                        } else if (y + 1 < height && x - 1 >= 0 && !grid[x-1][y+1]) {
+                            grid[x-1][y+1] = el;
+                            grid[x][y] = null;
+                            el.x = x - 1;
+                            el.y = y + 1;
+                        }
+                    }
+                }
+            }
+            draw();
+            requestAnimationFrame(update);
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, width, height);
+            for (let x = 0; x < width; x++) {
+                for (let y = 0; y < height; y++) {
+                    const el = grid[x][y];
+                    if (el) {
+                        ctx.fillStyle = el.color;
+                        ctx.fillRect(el.x, el.y, 1, 1);
+                    }
+                }
+            }
+        }
+
+        update();
+    </script>
+</body>
+</html>
